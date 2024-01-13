@@ -105,10 +105,10 @@ class Query<T extends object, TM extends Record<string, unknown> = {}, Output = 
     sql(
       projector: (proxy: TM & { $output: Output, $columns: () => string }) => string
     ) {
-      return {} as Output[];
+      return {} as Query<T, TM, Output>;
     }  
 
-    public select<U extends ProjectorType>(projector: (proxy: TM) => U ) {
+    public column<U extends ProjectorType>(projector: (proxy: TM) => U ) {
       return this as unknown as Query<T, TM, U>;
     }
 
@@ -132,7 +132,7 @@ class TableColumn<T extends object, TableKey extends keyof any, TM extends Recor
 
   constructor(private query: Query<T>) {}
 
-  column<U extends AnyColumnSchema = Record<string, unknown>>() {
+  column<U extends AnyColumnSchema = ProjectorType>() {
     return this.query as unknown as Query<T, TM & Record<TableKey, U & { $table: () => string }>>;
   }
 }
@@ -150,7 +150,7 @@ const result = new Query<ShowUserPermission>()
   .table({ pe: "sys.database_permissions" }).column<sys.DatabasePermissions>()
   .table({ o: "sys.objects" }).column<sys.Objects>()
   .table({ s: "sys.schemas" }).column<sys.Schemas>()
-  .select(_ => ({
+  .column(_ => ({
       principal_id: _.pr.principal_id,
       name: _.pr.name,
       type_desc: _.pr.type_desc,
@@ -179,7 +179,7 @@ const result2 = new Query<ShowUserPermission>()
   .table("sys.database_permissions").column<sys.DatabasePermissions>()
   .table("sys.objects").column<sys.Objects>()
   .table("sys.schemas").column<sys.Schemas>()
-  .select(_ => ({
+  .column(_ => ({
       principal_id: _["sys.database_principals"].principal_id,
       name: _["sys.database_principals"].name,
       type_desc: _["sys.database_principals"].type_desc,
@@ -263,19 +263,24 @@ const sql = `SELECT pr.principal_id
 
 //   ON doggos.owner = person.id;`;
 
+const innerJoinQuery = new Query()
+      .table("pet").column<{ owner_id: string, name: string }>()
+      .column(_ => ({
+        owner: _.pet.owner_id,
+        name: _.pet.owner_id
+      }))
+      .sql(_ => `
+        SELECT
+          ${_.$columns()}
+        FROM ${_.pet.$table()}
+        WHERE ${_.pet.name} = 'Doggo'
+      `);
+
 // NOTE: May be don't work
-// const resultSubqueryJoin = new Query()
-//       .table("person").column<{ id: string }>()
-//       .table("pet").column<{ owner_id: string, name: string }>()
-//       .table({
-//         "doggos": subquery => 
-//           subquery.sql(_ => `
-//             SELECT
-//               ${_.pet.owner_id} AS owner,
-//               ${_.pet.name}
-//             FROM
-//               ${_.pet.$table()}
-//             WHERE
-//               ${_.pet.name} = 'Doggo'
-//           `)
-//       }).column()
+const resultSubqueryJoin = new Query()
+      .table("person").column<{ id: string }>()
+      .table("pet").column<{ owner_id: string, name: string }>()
+      .table({ "doggos": innerJoinQuery }).column()
+      .column(_ => ({
+        test: _.doggos.ll
+      }))
