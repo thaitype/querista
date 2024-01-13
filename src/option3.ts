@@ -237,3 +237,45 @@ const sql = `SELECT pr.principal_id
     INNER JOIN sys.objects AS o ON pe.major_id = o.object_id
     INNER JOIN sys.schemas AS s ON o.schema_id = s.schema_id
     WHERE pr.type_desc = 'SQL_USER' AND pr.name = '${username}'`;
+
+
+
+// Test with Subquery Join
+// Code from https://kysely.dev/docs/examples/JOIN/subquery-join
+
+
+
+// expected output:
+// const subqueryJoinExpected = `
+//   SELECT
+//     doggos.*
+//     FROM
+//     person
+//     INNER JOIN (
+//       SELECT
+//         owner_id AS owner,
+//         name
+//       FROM
+//         pet
+//       WHERE
+//         name = 'Doggo'
+//     ) AS doggos 
+
+//   ON doggos.owner = person.id;`;
+
+// NOTE: May be don't work
+// const resultSubqueryJoin = new Query()
+//       .table("person").column<{ id: string }>()
+//       .table("pet").column<{ owner_id: string, name: string }>()
+//       .table({
+//         "doggos": subquery => 
+//           subquery.sql(_ => `
+//             SELECT
+//               ${_.pet.owner_id} AS owner,
+//               ${_.pet.name}
+//             FROM
+//               ${_.pet.$table()}
+//             WHERE
+//               ${_.pet.name} = 'Doggo'
+//           `)
+//       }).column()
