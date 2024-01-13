@@ -95,7 +95,7 @@ class Query<TM extends Record<string, unknown> = {}> {
 
     tableMap: TM = {} as TM;
     
-    sql<Output extends AnyColumnSchema = Record<string, unknown>>(projector: (proxy: TM & { output: Output }) => string): Query {
+    sql<Output extends AnyColumnSchema = Record<string, unknown>>(projector: (proxy: TM & { $output: Output }) => string): Query {
       return this;
     }  
     table<Table extends Record<string, unknown>>(table: Table) {
@@ -130,12 +130,12 @@ const result = new Query()
       ${_.pr.principal_id},
       ${_.pr.name},
       ${_.pr.type_desc},
-      ${_.pr.authentication_type_desc} AS ${_.output.auth_type},
+      ${_.pr.authentication_type_desc} AS ${_.$output.auth_type},
       ${_.pe.state_desc},
       ${_.pe.permission_name},
-      ${_.s.name} + '.' + ${_.o.name} AS ${_.output.ObjectName},
-      USER_NAME(${_.pe.grantee_principal_id}) AS ${_.output.grantee},
-      USER_NAME(${_.pe.grantor_principal_id}) AS ${_.output.grantor},
+      ${_.s.name} + '.' + ${_.o.name} AS ${_.$output.ObjectName},
+      USER_NAME(${_.pe.grantee_principal_id}) AS ${_.$output.grantee},
+      USER_NAME(${_.pe.grantor_principal_id}) AS ${_.$output.grantor},
       ${_.pr.create_date},
       ${_.pr.modify_date}
     FROM ${_.pr.$alias()}
