@@ -90,6 +90,27 @@ namespace sys {
 const username = "testuser";
 type AnyColumnSchema = object;
 
+
+type InferOutputQuery<T extends Query<any, any, any>> = T extends Query<any, any, infer U> ? U : never;
+type InferQuery<T extends Query<any, any, any>> = T extends Query<any, any, infer U> ? 
+  U extends Record<infer Y, infer X> ? Record<Y, string>
+  // { [K in keyof T]: Y } 
+  : U : never; 
+
+
+// InferOutputQuery<T>;
+
+
+type InferRecordOutputQuery<T extends Record<string, Query<any, any, any>> | Record<string, string>> = 
+  // Check if T is Subquery
+  T extends Record<string, Query<any, any, any>> 
+    // If T is Subquery, then infer the output of the subquery
+    ? { [K in keyof T]: InferOutputQuery<T[K]> } 
+    // If T is not Subquery, then infer the type of the column
+    : ProjectorType;
+
+
+
 /**
  * Note
  * 
@@ -112,10 +133,11 @@ class Query<T extends object, TM extends Record<string, unknown> = {}, Output = 
       return this as unknown as Query<T, TM, U>;
     }
 
-    table<TableKey extends string>(table: TableKey): TableColumn<T, TableKey , TM>;
-    table<Table extends Record<string, unknown>>(table: Table): TableColumn<T, keyof Table , TM>;
-    table<Table extends Record<string, unknown>>(nameOrTable: string | Table) {
-      return new TableColumn<T, keyof Table , TM>(this as any);
+    table<TableKey extends string>(table: TableKey): TableColumn<T, TableKey , TM, any>;
+    table<Table extends Record<string, string>>(table: Table): TableColumn<T, keyof Table , TM, any >;
+    table<TableSubQuery extends Record<string, Query<any>>>(table: TableSubQuery): TableColumn<T, keyof TableSubQuery , TM, InferRecordOutputQuery<TableSubQuery>>;
+    table<Table extends Record<string, string>, TableSubQuery extends Record<string, Query<any>>>(nameOrTable: string | Table) {
+      return new TableColumn<T, keyof Table , TM, any>(this as any);
     }
 }
 
@@ -128,12 +150,12 @@ class Query<T extends object, TM extends Record<string, unknown> = {}, Output = 
  * 
  */
 
-class TableColumn<T extends object, TableKey extends keyof any, TM extends Record<string, unknown>> {
+class TableColumn<T extends object, TableKey extends keyof any, TM extends Record<string, unknown>, ExpectedColumn> {
 
   constructor(private query: Query<T>) {}
 
-  column<U extends AnyColumnSchema = ProjectorType>() {
-    return this.query as unknown as Query<T, TM & Record<TableKey, U & { $table: () => string }>>;
+  column<U extends ExpectedColumn>() {
+    return this.query as unknown as Query<T, TM & Record<TableKey, U  & { $table: () => string }> >;
   }
 }
 
@@ -267,7 +289,7 @@ const innerJoinQuery = new Query()
       .table("pet").column<{ owner_id: string, name: string }>()
       .column(_ => ({
         owner: _.pet.owner_id,
-        name: _.pet.owner_id
+        name: _.pet.name,
       }))
       .sql(_ => `
         SELECT
@@ -282,5 +304,5 @@ const resultSubqueryJoin = new Query()
       .table("pet").column<{ owner_id: string, name: string }>()
       .table({ "doggos": innerJoinQuery }).column()
       .column(_ => ({
-        test: _.doggos.ll
+        test: _.doggos.doggos.owner
       }))
