@@ -112,7 +112,9 @@ class Query<T extends object, TM extends Record<string, unknown> = {}, Output = 
       return this as unknown as Query<T, TM, U>;
     }
 
-    table<Table extends Record<string, unknown>>(table: Table) {
+    table<TableKey extends string>(table: TableKey): TableColumn<T, TableKey , TM>;
+    table<Table extends Record<string, unknown>>(table: Table): TableColumn<T, keyof Table , TM>;
+    table<Table extends Record<string, unknown>>(nameOrTable: string | Table) {
       return new TableColumn<T, keyof Table , TM>(this as any);
     }
 }
@@ -171,6 +173,34 @@ const result = new Query<ShowUserPermission>()
     WHERE ${_.pr.type_desc} = 'SQL_USER' AND ${_.pr.name} = '${username}'
   `);
 
+// Table without alias
+const result2 = new Query<ShowUserPermission>()
+  .table("sys.database_principals").column<sys.DatabasePrincipals>()
+  .table("sys.database_permissions").column<sys.DatabasePermissions>()
+  .table("sys.objects").column<sys.Objects>()
+  .table("sys.schemas").column<sys.Schemas>()
+  .select(_ => ({
+      principal_id: _["sys.database_principals"].principal_id,
+      name: _["sys.database_principals"].name,
+      type_desc: _["sys.database_principals"].type_desc,
+      auth_type: _["sys.database_principals"].authentication_type_desc,
+      state_desc: _["sys.database_permissions"].state_desc,
+      permission_name: _["sys.database_permissions"].permission_name,
+      ObjectName: `${_["sys.schemas"].name} + '.' + ${_["sys.objects"].name}`,
+      grantee: `USER_NAME(${_["sys.database_permissions"].grantee_principal_id})`,
+      grantor: `USER_NAME(${_["sys.database_permissions"].grantor_principal_id})`,
+      create_date: _["sys.database_principals"].create_date,
+      modify_date: _["sys.database_principals"].modify_date,
+  }))
+  .sql(_ => `
+    SELECT 
+      ${_.$columns()}
+    FROM ${_["sys.database_principals"].$table()}
+    INNER JOIN ${_["sys.database_permissions"].$table()} ON ${_["sys.database_permissions"].grantee_principal_id} = ${_["sys.database_principals"].principal_id}
+    INNER JOIN ${_["sys.objects"].$table()} ON ${_["sys.database_permissions"].major_id} = ${_["sys.objects"].object_id}
+    INNER JOIN ${_["sys.schemas"].$table()} ON ${_["sys.objects"].schema_id} = ${_["sys.schemas"].schema_id}
+    WHERE ${_["sys.database_principals"].type_desc} = 'SQL_USER' AND ${_["sys.database_principals"].name} = '${username}'
+  `);
 
 
 
