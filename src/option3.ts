@@ -106,16 +106,16 @@ class Query<T extends object, TM extends Record<string, unknown> = {}, Output = 
     }
 
     table<Table extends Record<string, unknown>>(table: Table) {
-      return new TableColumn<T, Table , TM>(this as any);
+      return new TableColumn<T, keyof Table , TM>(this as any);
     }
 }
 
-class TableColumn<T extends object, Table extends Record<string, unknown>, TM extends Record<string, unknown>> {
+class TableColumn<T extends object, TableKey extends keyof any, TM extends Record<string, unknown>> {
 
   constructor(private query: Query<T>) {}
 
   column<U extends AnyColumnSchema = Record<string, unknown>>() {
-    return this.query as unknown as Query<T, TM & Record<keyof Table, U & { $alias: () => string }>>;
+    return this.query as unknown as Query<T, TM & Record<TableKey, U & { $table: () => string }>>;
   }
 }
 
@@ -126,7 +126,7 @@ type A = {
   o: sys.Objects,
 }
 
-// With simple column output
+// Alias table names
 const result = new Query<ShowUserPermission>()
   .table({ pr: "sys.database_principals" }).column<sys.DatabasePrincipals>()
   .table({ pe: "sys.database_permissions" }).column<sys.DatabasePermissions>()
@@ -148,20 +148,14 @@ const result = new Query<ShowUserPermission>()
   .sql(_ => `
     SELECT 
       ${_.$columns()}
-    FROM ${_.pr.$alias()}
-    INNER JOIN ${_.pe.$alias()} ON ${_.pe.grantee_principal_id} = ${_.pr.principal_id}
-    INNER JOIN ${_.o.$alias()} ON ${_.pe.major_id} = ${_.o.object_id}
-    INNER JOIN ${_.s.$alias()} ON ${_.o.schema_id} = ${_.s.schema_id}
+    FROM ${_.pr.$table()}
+    INNER JOIN ${_.pe.$table()} ON ${_.pe.grantee_principal_id} = ${_.pr.principal_id}
+    INNER JOIN ${_.o.$table()} ON ${_.pe.major_id} = ${_.o.object_id}
+    INNER JOIN ${_.s.$table()} ON ${_.o.schema_id} = ${_.s.schema_id}
     WHERE ${_.pr.type_desc} = 'SQL_USER' AND ${_.pr.name} = '${username}'
   `);
 
 
-
-
-
-
-
-  
 type Result = typeof result;
 // type Result = {
 //   principal_id: number;
