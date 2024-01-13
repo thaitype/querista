@@ -90,6 +90,13 @@ namespace sys {
 const username = "testuser";
 type AnyColumnSchema = object;
 
+/**
+ * Note
+ * 
+ * $columns() returns the columns with table alias
+ * for example:
+ *  $columns() => "pr.principal_id, pr.name, pr.type_desc, pr.authentication_type_desc AS auth_type, pr.default_schema_name, pr.create_date, pr.modify_date"
+ */
 
 class Query<T extends object, TM extends Record<string, unknown> = {}, Output = ExcludeProperties<T, unknown[]>> {
 
@@ -109,6 +116,15 @@ class Query<T extends object, TM extends Record<string, unknown> = {}, Output = 
       return new TableColumn<T, keyof Table , TM>(this as any);
     }
 }
+
+/**
+ * Note:
+ * 
+ * $table() returns the table name or table with alias
+ * for example:
+ *  $table() => "sys.database_principals" | "sys.database_principals AS pr"
+ * 
+ */
 
 class TableColumn<T extends object, TableKey extends keyof any, TM extends Record<string, unknown>> {
 
@@ -154,6 +170,8 @@ const result = new Query<ShowUserPermission>()
     INNER JOIN ${_.s.$table()} ON ${_.o.schema_id} = ${_.s.schema_id}
     WHERE ${_.pr.type_desc} = 'SQL_USER' AND ${_.pr.name} = '${username}'
   `);
+
+
 
 
 type Result = typeof result;
