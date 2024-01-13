@@ -13,6 +13,30 @@ This project introduces a simple yet powerful TypeScript implementation for buil
 
 ## Expected Usage
 
+### Expected Result: 
+
+```sql
+SELECT 
+      pr.principal_id,
+      pr.name,
+      pr.type_desc,
+      pr.authentication_type_desc AS auth_type,
+      pe.state_desc,
+      pe.permission_name,
+      s.name + '.' + o.name AS ObjectName,
+      USER_NAME(pe.grantee_principal_id) AS grantee,
+      USER_NAME(pe.grantor_principal_id) AS grantor,
+      pr.create_date,
+      pr.modify_date,
+  FROM sys.database_principals AS pr
+  INNER JOIN sys.database_permissions AS pe ON pe.grantee_principal_id = pr.principal_id
+  INNER JOIN sys.objects AS o ON pe.major_id = o.object_id
+  INNER JOIN sys.schemas AS s ON o.schema_id = s.schema_id
+  WHERE pr.type_desc = 'SQL_USER' AND pr.name = 'MY_USER'
+```
+
+### Option 1:
+
 From [option 1](src/option1.ts): 
 
 ```ts
@@ -42,27 +66,37 @@ const result = new Query()
   `);
 ```
 
-The result should be:
 
-```sql
-SELECT 
-      pr.principal_id,
-      pr.name,
-      pr.type_desc,
-      pr.authentication_type_desc AS auth_type,
-      pe.state_desc,
-      pe.permission_name,
-      s.name + '.' + o.name AS ObjectName,
-      USER_NAME(pe.grantee_principal_id) AS grantee,
-      USER_NAME(pe.grantor_principal_id) AS grantor,
-      pr.create_date,
-      pr.modify_date,
-  FROM sys.database_principals AS pr
-  INNER JOIN sys.database_permissions AS pe ON pe.grantee_principal_id = pr.principal_id
-  INNER JOIN sys.objects AS o ON pe.major_id = o.object_id
-  INNER JOIN sys.schemas AS s ON o.schema_id = s.schema_id
-  WHERE pr.type_desc = 'SQL_USER' AND pr.name = 'MY_USER'
-```
+### Option 2:
+
+From [option 2](src/option2.ts):
+```ts
+const result = new Query()
+  .table({ pr: "sys.database_principals" }).column<sys.DatabasePrincipals>()
+  .table({ pe: "sys.database_permissions" }).column<sys.DatabasePermissions>()
+  .table({ o: "sys.objects" }).column<sys.Objects>()
+  .table({ s: "sys.schemas" }).column<sys.Schemas>()
+  .sql<ShowUserPermission>(_ => `
+    SELECT 
+      ${_.pr.principal_id},
+      ${_.pr.name},
+      ${_.pr.type_desc},
+      ${_.pr.authentication_type_desc} AS auth_type,
+      ${_.pe.state_desc},
+      ${_.pe.permission_name},
+      ${_.s.name} + '.' + ${_.o.name} AS ObjectName,
+      USER_NAME(${_.pe.grantee_principal_id}) AS grantee,
+      USER_NAME(${_.pe.grantor_principal_id}) AS grantor,
+      ${_.pr.create_date},
+      ${_.pr.modify_date}
+    FROM ${_.pr.$alias}
+    INNER JOIN ${_.pe.$alias} ON ${_.pe.grantee_principal_id} = ${_.pr.principal_id}
+    INNER JOIN ${_.o.$alias} ON ${_.pe.major_id} = ${_.o.object_id}
+    INNER JOIN ${_.s.$alias} ON ${_.o.schema_id} = ${_.s.schema_id}
+    WHERE ${_.pr.type_desc} = 'SQL_USER' AND ${_.pr.name} = '${username}'
+  `);
+``` 
+
 
 ## Contribution
 Contributions are welcome! Feel free to submit issues, feature requests, or pull requests to help improve this project.
