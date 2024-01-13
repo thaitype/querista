@@ -97,6 +97,39 @@ const result = new Query()
   `);
 ``` 
 
+### Option 3
+
+From [option 3](src/option3.ts):
+
+```ts
+const result = new Query<ShowUserPermission>()
+  .table({ pr: "sys.database_principals" }).column<sys.DatabasePrincipals>()
+  .table({ pe: "sys.database_permissions" }).column<sys.DatabasePermissions>()
+  .table({ o: "sys.objects" }).column<sys.Objects>()
+  .table({ s: "sys.schemas" }).column<sys.Schemas>()
+  .select(_ => ({
+      principal_id: _.pr.principal_id,
+      name: _.pr.name,
+      type_desc: _.pr.type_desc,
+      auth_type: _.pr.authentication_type_desc,
+      state_desc: _.pe.state_desc,
+      permission_name: _.pe.permission_name,
+      ObjectName: `${_.s.name} + '.' + ${_.o.name}`,
+      grantee: `USER_NAME(${_.pe.grantee_principal_id})`,
+      grantor: `USER_NAME(${_.pe.grantor_principal_id})`,
+      create_date: _.pr.create_date,
+      modify_date: _.pr.modify_date
+  }))
+  .sql(_ => `
+    SELECT 
+      ${_.$columns()}
+    FROM ${_.pr.$alias()}
+    INNER JOIN ${_.pe.$alias()} ON ${_.pe.grantee_principal_id} = ${_.pr.principal_id}
+    INNER JOIN ${_.o.$alias()} ON ${_.pe.major_id} = ${_.o.object_id}
+    INNER JOIN ${_.s.$alias()} ON ${_.o.schema_id} = ${_.s.schema_id}
+    WHERE ${_.pr.type_desc} = 'SQL_USER' AND ${_.pr.name} = '${username}'
+  `);
+```
 
 ## Contribution
 Contributions are welcome! Feel free to submit issues, feature requests, or pull requests to help improve this project.
