@@ -108,7 +108,7 @@ class TableColumn<Name extends string, TM extends Record<string, unknown>> {
   constructor(private query: Query) {}
 
   column<U extends AnyColumnSchema = Record<string, unknown>>() {
-    return this.query as unknown as Query<TM & Record<Name, U & { $alias: unknown }>>;
+    return this.query as unknown as Query<TM & Record<Name, U & { $alias: () => string }>>;
   }
 }
 
@@ -130,18 +130,18 @@ const result = new Query()
       ${_.pr.principal_id},
       ${_.pr.name},
       ${_.pr.type_desc},
-      ${_.pr.authentication_type_desc} AS auth_type,
+      ${_.pr.authentication_type_desc} AS ${_.output.auth_type},
       ${_.pe.state_desc},
       ${_.pe.permission_name},
-      ${_.s.name} + '.' + ${_.o.name} AS ObjectName,
-      USER_NAME(${_.pe.grantee_principal_id}) AS grantee,
-      USER_NAME(${_.pe.grantor_principal_id}) AS grantor,
+      ${_.s.name} + '.' + ${_.o.name} AS ${_.output.ObjectName},
+      USER_NAME(${_.pe.grantee_principal_id}) AS ${_.output.grantee},
+      USER_NAME(${_.pe.grantor_principal_id}) AS ${_.output.grantor},
       ${_.pr.create_date},
       ${_.pr.modify_date}
-    FROM ${_.pr.$alias}
-    INNER JOIN ${_.pe.$alias} ON ${_.pe.grantee_principal_id} = ${_.pr.principal_id}
-    INNER JOIN ${_.o.$alias} ON ${_.pe.major_id} = ${_.o.object_id}
-    INNER JOIN ${_.s.$alias} ON ${_.o.schema_id} = ${_.s.schema_id}
+    FROM ${_.pr.$alias()}
+    INNER JOIN ${_.pe.$alias()} ON ${_.pe.grantee_principal_id} = ${_.pr.principal_id}
+    INNER JOIN ${_.o.$alias()} ON ${_.pe.major_id} = ${_.o.object_id}
+    INNER JOIN ${_.s.$alias()} ON ${_.o.schema_id} = ${_.s.schema_id}
     WHERE ${_.pr.type_desc} = 'SQL_USER' AND ${_.pr.name} = '${username}'
   `);
 
