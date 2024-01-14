@@ -35,79 +35,17 @@ SELECT
   WHERE pr.type_desc = 'SQL_USER' AND pr.name = 'MY_USER'
 ```
 
-### Option 1:
+### Code
 
-From [option 1](src/option1.ts): 
+From [option 4](src/option1.4s): 
 
 ```ts
-const result = new Query()
-  .table('pr', "sys.database_principals").column<sys.DatabasePrincipals>()
-  .table('pe', 'sys.database_permission').column<sys.DatabasePermissions>()
-  .table('o', 'sys.objects').column<sys.Objects>()
-  .table('s', 'sys.schema').column<sys.Schemas>()
-  .sql<ShowUserPermission>(_ => `
-    SELECT 
-      ${_.pr.principal_id},
-      ${_.pr.name},
-      ${_.pr.type_desc},
-      ${_.pr.authentication_type_desc} AS ${_.output.auth_type},
-      ${_.pe.state_desc},
-      ${_.pe.permission_name},
-      ${_.s.name} + '.' + ${_.o.name} AS ${_.output.ObjectName},
-      USER_NAME(${_.pe.grantee_principal_id}) AS ${_.output.grantee},
-      USER_NAME(${_.pe.grantor_principal_id}) AS ${_.output.grantor},
-      ${_.pr.create_date},
-      ${_.pr.modify_date}
-    FROM ${_.pr.$alias()}
-    INNER JOIN ${_.pe.$alias()} ON ${_.pe.grantee_principal_id} = ${_.pr.principal_id}
-    INNER JOIN ${_.o.$alias()} ON ${_.pe.major_id} = ${_.o.object_id}
-    INNER JOIN ${_.s.$alias()} ON ${_.o.schema_id} = ${_.s.schema_id}
-    WHERE ${_.pr.type_desc} = 'SQL_USER' AND ${_.pr.name} = '${username}'
-  `);
-```
-
-
-### Option 2:
-
-From [option 2](src/option2.ts):
-```ts
-const result = new Query()
+ const result = new Query<ShowUserPermission>()
   .table({ pr: "sys.database_principals" }).column<sys.DatabasePrincipals>()
   .table({ pe: "sys.database_permissions" }).column<sys.DatabasePermissions>()
   .table({ o: "sys.objects" }).column<sys.Objects>()
   .table({ s: "sys.schemas" }).column<sys.Schemas>()
-  .sql<ShowUserPermission>(_ => `
-    SELECT 
-      ${_.pr.principal_id},
-      ${_.pr.name},
-      ${_.pr.type_desc},
-      ${_.pr.authentication_type_desc} AS ${_.output.auth_type},
-      ${_.pe.state_desc},
-      ${_.pe.permission_name},
-      ${_.s.name} + '.' + ${_.o.name} AS ${_.output.ObjectName},
-      USER_NAME(${_.pe.grantee_principal_id}) AS ${_.output.grantee},
-      USER_NAME(${_.pe.grantor_principal_id}) AS ${_.output.grantor},
-      ${_.pr.create_date},
-      ${_.pr.modify_date}
-    FROM ${_.pr.$alias()}
-    INNER JOIN ${_.pe.$alias()} ON ${_.pe.grantee_principal_id} = ${_.pr.principal_id}
-    INNER JOIN ${_.o.$alias()} ON ${_.pe.major_id} = ${_.o.object_id}
-    INNER JOIN ${_.s.$alias()} ON ${_.o.schema_id} = ${_.s.schema_id}
-    WHERE ${_.pr.type_desc} = 'SQL_USER' AND ${_.pr.name} = '${username}'
-  `);
-``` 
-
-### Option 3
-
-From [option 3](src/option3.ts):
-
-```ts
-const result = new Query<ShowUserPermission>()
-  .table({ pr: "sys.database_principals" }).column<sys.DatabasePrincipals>()
-  .table({ pe: "sys.database_permissions" }).column<sys.DatabasePermissions>()
-  .table({ o: "sys.objects" }).column<sys.Objects>()
-  .table({ s: "sys.schemas" }).column<sys.Schemas>()
-  .select(_ => ({
+  .column(_ => ({
       principal_id: _.pr.principal_id,
       name: _.pr.name,
       type_desc: _.pr.type_desc,
@@ -123,12 +61,63 @@ const result = new Query<ShowUserPermission>()
   .sql(_ => `
     SELECT 
       ${_.$columns()}
-    FROM ${_.pr.$alias()}
-    INNER JOIN ${_.pe.$alias()} ON ${_.pe.grantee_principal_id} = ${_.pr.principal_id}
-    INNER JOIN ${_.o.$alias()} ON ${_.pe.major_id} = ${_.o.object_id}
-    INNER JOIN ${_.s.$alias()} ON ${_.o.schema_id} = ${_.s.schema_id}
+    FROM ${_.pr.$table()}
+    INNER JOIN ${_.pe.$table()} ON ${_.pe.grantee_principal_id} = ${_.pr.principal_id}
+    INNER JOIN ${_.o.$table()} ON ${_.pe.major_id} = ${_.o.object_id}
+    INNER JOIN ${_.s.$table()} ON ${_.o.schema_id} = ${_.s.schema_id}
     WHERE ${_.pr.type_desc} = 'SQL_USER' AND ${_.pr.name} = '${username}'
   `);
+```
+
+## Subquery
+
+Expected Value:
+
+```sql
+  SELECT
+    doggos.*
+    FROM
+    person
+    INNER JOIN (
+      SELECT
+        owner_id AS owner,
+        name
+      FROM
+        pet
+      WHERE
+        name = 'Doggo'
+    ) AS doggos 
+```
+
+TS Query:
+
+```ts
+const innerJoinQuery = new Query()
+      .table("pet").column<{ owner_id: string, name: string }>()
+      .column(_ => ({
+        owner: _.pet.owner_id,
+        name: _.pet.name,
+      }))
+      .sql(_ => `
+        SELECT
+          ${_.$columns()}
+        FROM ${_.pet.$table()}
+        WHERE ${_.pet.name} = 'Doggo'
+      `);
+
+const resultSubqueryJoin = new Query()
+      .table("person").column<{ id: string }>()
+      .table({ "doggos": innerJoinQuery }).column()
+      .column(_ => ({
+        owner: _.person.id,
+        name: _.doggos.name,
+      }))
+      .sql(_ => `
+        SELECT
+          ${_.$columns()}
+        FROM ${_.person.$table()}
+        INNER JOIN ${_.doggos.$table()} ON ${_.doggos.owner} = ${_.person.id}
+      `);
 ```
 
 ## Contribution

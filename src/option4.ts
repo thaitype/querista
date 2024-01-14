@@ -1,8 +1,7 @@
+import { ShowUserPermission, sys } from './interface';
 /**
  * Proof of concept
  */
-
-import { ShowUserPermission, sys } from "./interface";
 
 // https://kysely.dev/docs/getting-started?dialect=mssql
 // https://github.com/cbrianball/ts-odata-client
@@ -21,8 +20,15 @@ T,
 }[keyof T]
 >;
 
+
+
 const username = "testuser";
 type AnyColumnSchema = object;
+
+
+
+type InferRecordOutputQuery<T extends Record<string, Query<any, any, any>>> =  
+  T extends Record<string, Query<any, any, infer U>> ? U : never;
 
 /**
  * Note
@@ -47,7 +53,15 @@ class Query<T extends object, TM extends Record<string, unknown> = {}, Output = 
     }
 
     table<TableKey extends string>(table: TableKey): TableColumn<T, TableKey , TM, any>;
+
     table<Table extends Record<string, string>>(table: Table): TableColumn<T, keyof Table , TM, any >;
+
+    /**
+     * Accept Subquery
+     */
+    table<TableSubQuery extends Record<string, Query<any>>>(table: TableSubQuery): 
+      TableColumn<T, keyof TableSubQuery , TM, InferRecordOutputQuery<TableSubQuery>>;
+
     table<Table extends Record<string, string>, TableSubQuery extends Record<string, Query<any>>>(nameOrTable: string | Table) {
       return new TableColumn<T, keyof Table , TM, any>(this as any);
     }
@@ -77,9 +91,8 @@ type A = {
   pe: sys.DatabasePermissions,
   o: sys.Objects,
 }
-
-// Alias table names
-const result = new Query<ShowUserPermission>()
+function demo(){// Alias table names
+ const result = new Query<ShowUserPermission>()
   .table({ pr: "sys.database_principals" }).column<sys.DatabasePrincipals>()
   .table({ pe: "sys.database_permissions" }).column<sys.DatabasePermissions>()
   .table({ o: "sys.objects" }).column<sys.Objects>()
@@ -107,68 +120,62 @@ const result = new Query<ShowUserPermission>()
     WHERE ${_.pr.type_desc} = 'SQL_USER' AND ${_.pr.name} = '${username}'
   `);
 
-// Table without alias
-const result2 = new Query<ShowUserPermission>()
-  .table("sys.database_principals").column<sys.DatabasePrincipals>()
-  .table("sys.database_permissions").column<sys.DatabasePermissions>()
-  .table("sys.objects").column<sys.Objects>()
-  .table("sys.schemas").column<sys.Schemas>()
-  .column(_ => ({
-      principal_id: _["sys.database_principals"].principal_id,
-      name: _["sys.database_principals"].name,
-      type_desc: _["sys.database_principals"].type_desc,
-      auth_type: _["sys.database_principals"].authentication_type_desc,
-      state_desc: _["sys.database_permissions"].state_desc,
-      permission_name: _["sys.database_permissions"].permission_name,
-      ObjectName: `${_["sys.schemas"].name} + '.' + ${_["sys.objects"].name}`,
-      grantee: `USER_NAME(${_["sys.database_permissions"].grantee_principal_id})`,
-      grantor: `USER_NAME(${_["sys.database_permissions"].grantor_principal_id})`,
-      create_date: _["sys.database_principals"].create_date,
-      modify_date: _["sys.database_principals"].modify_date,
-  }))
-  .sql(_ => `
-    SELECT 
-      ${_.$columns()}
-    FROM ${_["sys.database_principals"].$table()}
-    INNER JOIN ${_["sys.database_permissions"].$table()} ON ${_["sys.database_permissions"].grantee_principal_id} = ${_["sys.database_principals"].principal_id}
-    INNER JOIN ${_["sys.objects"].$table()} ON ${_["sys.database_permissions"].major_id} = ${_["sys.objects"].object_id}
-    INNER JOIN ${_["sys.schemas"].$table()} ON ${_["sys.objects"].schema_id} = ${_["sys.schemas"].schema_id}
-    WHERE ${_["sys.database_principals"].type_desc} = 'SQL_USER' AND ${_["sys.database_principals"].name} = '${username}'
-  `);
+}
+
+// Test with Subquery Join
+// Code from https://kysely.dev/docs/examples/JOIN/subquery-join
 
 
+// doggos: {
+//   doggos: {
+//       owner: string;
+//       name: string;
+//   };
+// } & {
+//   $table: () => string;
+// }
 
-type Result = typeof result;
-// type Result = {
-//   principal_id: number;
-//   name: string;
-//   type_desc: string;
-//   auth_type: string;
-//   state_desc: string;
-//   permission_name: string;
-//   ObjectName: string;
-//   grantee: string;
-//   grantor: string;
-//   create_date: Date;
-//   modify_date: Date;
-// }[];
+// expected output:
+// const subqueryJoinExpected = `
+//   SELECT
+//     doggos.*
+//     FROM
+//     person
+//     INNER JOIN (
+//       SELECT
+//         owner_id AS owner,
+//         name
+//       FROM
+//         pet
+//       WHERE
+//         name = 'Doggo'
+//     ) AS doggos 
 
-// Output:
+//   ON doggos.owner = person.id;`;
 
-const sql = `SELECT pr.principal_id
-        ,pr.name
-        ,pr.type_desc
-        ,pr.authentication_type_desc AS auth_type
-        ,pe.state_desc
-        ,pe.permission_name
-        ,s.name + '.' + o.name AS ObjectName
-        ,USER_NAME(pe.grantee_principal_id) AS grantee
-        ,USER_NAME(pe.grantor_principal_id) AS grantor
-        ,pr.create_date
-        ,pr.modify_date
-    FROM sys.database_principals AS pr
-    INNER JOIN sys.database_permissions AS pe ON pe.grantee_principal_id = pr.principal_id
-    INNER JOIN sys.objects AS o ON pe.major_id = o.object_id
-    INNER JOIN sys.schemas AS s ON o.schema_id = s.schema_id
-    WHERE pr.type_desc = 'SQL_USER' AND pr.name = '${username}'`;
+const innerJoinQuery = new Query()
+      .table("pet").column<{ owner_id: string, name: string }>()
+      .column(_ => ({
+        owner: _.pet.owner_id,
+        name: _.pet.name,
+      }))
+      .sql(_ => `
+        SELECT
+          ${_.$columns()}
+        FROM ${_.pet.$table()}
+        WHERE ${_.pet.name} = 'Doggo'
+      `);
 
+const resultSubqueryJoin = new Query()
+      .table("person").column<{ id: string }>()
+      .table({ "doggos": innerJoinQuery }).column()
+      .column(_ => ({
+        owner: _.person.id,
+        name: _.doggos.name,
+      }))
+      .sql(_ => `
+        SELECT
+          ${_.$columns()}
+        FROM ${_.person.$table()}
+        INNER JOIN ${_.doggos.$table()} ON ${_.doggos.owner} = ${_.person.id}
+      `);
