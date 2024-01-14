@@ -110,16 +110,52 @@ const nestedQuery = db.select({
     name: usersTable.projectId,
     age: usersTable.age
   })
-  .from(sql`${usersTable}`)
+  .from(usersTable)
   .where(sql`${usersTable.id} > 10`)
 
 db.select({
   projectId: usersTable.projectId,
   count: sql`count(${usersTable.id})`,
 })
-  .from(sql`${usersTable}`)
+  .from(usersTable)
   .where(sql`${usersTable.id} > 10`)
   .innerJoin(nestedQuery, sql`${nestedQuery.name} = ${usersTable.name}`)
   .innerJoin(postTable, sql`${postTable.userId} = ${usersTable.id}`)
   .groupBy(sql`${postTable.projectId}`);
+
+
+
+// expected output:
+// const subqueryJoinExpected = `
+//   SELECT
+//     doggos.*
+//     FROM
+//     person
+//     INNER JOIN (
+//       SELECT
+//         owner_id AS owner,
+//         name
+//       FROM
+//         pet
+//       WHERE
+//         name = 'Doggo'
+//     ) AS doggos 
+
+//   ON doggos.owner = person.id;`;
+
+// Expected result for subquery example 2:
+const petTable = {} as any;
+const personTable = {} as any;
+
+const nestedQueryEx2 = db.select({
+    name: petTable.name,
+    owner: petTable.owner_id,
+  })
+  .from(petTable)
+  .where(sql`${petTable.name} = 'Doggo'`);
+
+db
+  .select()
+  .from(personTable)
+  .innerJoin(nestedQueryEx2, sql`${nestedQueryEx2.owner} = ${personTable.id}`);
 
