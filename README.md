@@ -1,4 +1,6 @@
-# @thaitype/builder
+# @thaitype/ts-builder
+
+[![Test & Build](https://github.com/thaitype/sql-builder/actions/workflows/main.yml/badge.svg)](https://github.com/thaitype/sql-builder/actions/workflows/main.yml)
 
 > In development process & Proof of concept
 
