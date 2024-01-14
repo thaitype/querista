@@ -2,7 +2,7 @@
  * Proof of concept
  */
 
-import { ShowUserPermission, sys } from "./interface";
+import { ShowUserPermission, sys } from "../interfaces/interface";
 
 // https://kysely.dev/docs/getting-started?dialect=mssql
 // https://github.com/cbrianball/ts-odata-client

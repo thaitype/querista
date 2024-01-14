@@ -1,4 +1,4 @@
-import { ShowUserPermission, sys } from './interface';
+import { ShowUserPermission, sys } from '../interfaces/interface';
 /**
  * Proof of concept
  */
