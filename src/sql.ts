@@ -87,3 +87,39 @@ const result = {
     },
   ],
 };
+
+// Expected result:
+
+const db = {} as any;
+const usersTable = {} as any;
+const postTable = {} as any;
+
+db.select({
+  projectId: usersTable.projectId,
+  count: sql`count(${usersTable.id})`,
+})
+  .from(sql`${usersTable}`)
+  .where(sql`${usersTable.id} > 10`)
+  .innerJoin(usersTable, sql`${usersTable.projectId} = ${usersTable.project.id}`)
+  .innerJoin(postTable, sql`${postTable.userId} = ${usersTable.id}`)
+  .groupBy(sql`${postTable.projectId}`);
+
+// Expected result for subquery:
+
+const nestedQuery = db.select({
+    name: usersTable.projectId,
+    age: usersTable.age
+  })
+  .from(sql`${usersTable}`)
+  .where(sql`${usersTable.id} > 10`)
+
+db.select({
+  projectId: usersTable.projectId,
+  count: sql`count(${usersTable.id})`,
+})
+  .from(sql`${usersTable}`)
+  .where(sql`${usersTable.id} > 10`)
+  .innerJoin(nestedQuery, sql`${nestedQuery.name} = ${usersTable.name}`)
+  .innerJoin(postTable, sql`${postTable.userId} = ${usersTable.id}`)
+  .groupBy(sql`${postTable.projectId}`);
+
