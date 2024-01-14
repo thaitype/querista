@@ -2,7 +2,7 @@
 // Test with Subquery Join
 // Code from https://kysely.dev/docs/examples/JOIN/subquery-join
 
-import { Query } from "src/query";
+import { TableSchema } from "src/query";
 
 
 // doggos: {
@@ -32,7 +32,7 @@ import { Query } from "src/query";
 
 //   ON doggos.owner = person.id;`;
 
-const innerJoinQuery = new Query()
+const innerJoinQuery = new TableSchema()
       .table("pet").schema<{ owner_id: string, name: string }>()
       .column(_ => ({
         owner: _.pet.owner_id,
@@ -45,7 +45,7 @@ const innerJoinQuery = new Query()
         WHERE ${_.pet.name} = 'Doggo'
       `);
 
-const resultSubqueryJoin = new Query()
+const resultSubqueryJoin = new TableSchema()
       .table("person").schema<{ id: string }>()
       .table({ "doggos": innerJoinQuery }).schema()
       .column(_ => ({

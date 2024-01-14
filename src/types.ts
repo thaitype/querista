@@ -1,7 +1,7 @@
 
 // https://kysely.dev/docs/getting-started?dialect=mssql
 
-import { Query } from "./main";
+import { TableSchema } from "./main";
 
 // https://github.com/cbrianball/ts-odata-client
 export type ProjectorType = {
@@ -22,6 +22,6 @@ T,
 
 export type AnyColumnSchema = object;
 
-export type InferRecordOutputQuery<T extends Record<string, Query<any, any, any>>> =  
-  T extends Record<string, Query<any, any, infer U>> ? U : never;
+export type InferRecordOutputQuery<T extends Record<string, TableSchema<any, any, any>>> =  
+  T extends Record<string, TableSchema<any, any, infer U>> ? U : never;
 
