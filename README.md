@@ -41,10 +41,10 @@ From [option 4](src/option1.4s):
 
 ```ts
  const result = new Query<ShowUserPermission>()
-  .table({ pr: "sys.database_principals" }).column<sys.DatabasePrincipals>()
-  .table({ pe: "sys.database_permissions" }).column<sys.DatabasePermissions>()
-  .table({ o: "sys.objects" }).column<sys.Objects>()
-  .table({ s: "sys.schemas" }).column<sys.Schemas>()
+  .table({ pr: "sys.database_principals" }).schema<sys.DatabasePrincipals>()
+  .table({ pe: "sys.database_permissions" }).schema<sys.DatabasePermissions>()
+  .table({ o: "sys.objects" }).schema<sys.Objects>()
+  .table({ s: "sys.schemas" }).schema<sys.Schemas>()
   .column(_ => ({
       principal_id: _.pr.principal_id,
       name: _.pr.name,
@@ -67,6 +67,7 @@ From [option 4](src/option1.4s):
     INNER JOIN ${_.s.$table()} ON ${_.o.schema_id} = ${_.s.schema_id}
     WHERE ${_.pr.type_desc} = 'SQL_USER' AND ${_.pr.name} = '${username}'
   `);
+
 ```
 
 ## Subquery
@@ -93,7 +94,7 @@ TS Query:
 
 ```ts
 const innerJoinQuery = new Query()
-      .table("pet").column<{ owner_id: string, name: string }>()
+      .table("pet").schema<{ owner_id: string, name: string }>()
       .column(_ => ({
         owner: _.pet.owner_id,
         name: _.pet.name,
@@ -106,8 +107,8 @@ const innerJoinQuery = new Query()
       `);
 
 const resultSubqueryJoin = new Query()
-      .table("person").column<{ id: string }>()
-      .table({ "doggos": innerJoinQuery }).column()
+      .table("person").schema<{ id: string }>()
+      .table({ "doggos": innerJoinQuery }).schema()
       .column(_ => ({
         owner: _.person.id,
         name: _.doggos.name,

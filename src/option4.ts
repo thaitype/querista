@@ -80,7 +80,7 @@ class TableColumn<T extends object, TableKey extends keyof any, TM extends Recor
 
   constructor(private query: Query<T>) {}
 
-  column<U extends ExpectedColumn>() {
+  schema<U extends ExpectedColumn>() {
     return this.query as unknown as Query<T, TM & Record<TableKey, U  & { $table: () => string }> >;
   }
 }
@@ -93,10 +93,10 @@ type A = {
 }
 function demo(){// Alias table names
  const result = new Query<ShowUserPermission>()
-  .table({ pr: "sys.database_principals" }).column<sys.DatabasePrincipals>()
-  .table({ pe: "sys.database_permissions" }).column<sys.DatabasePermissions>()
-  .table({ o: "sys.objects" }).column<sys.Objects>()
-  .table({ s: "sys.schemas" }).column<sys.Schemas>()
+  .table({ pr: "sys.database_principals" }).schema<sys.DatabasePrincipals>()
+  .table({ pe: "sys.database_permissions" }).schema<sys.DatabasePermissions>()
+  .table({ o: "sys.objects" }).schema<sys.Objects>()
+  .table({ s: "sys.schemas" }).schema<sys.Schemas>()
   .column(_ => ({
       principal_id: _.pr.principal_id,
       name: _.pr.name,
@@ -154,7 +154,7 @@ function demo(){// Alias table names
 //   ON doggos.owner = person.id;`;
 
 const innerJoinQuery = new Query()
-      .table("pet").column<{ owner_id: string, name: string }>()
+      .table("pet").schema<{ owner_id: string, name: string }>()
       .column(_ => ({
         owner: _.pet.owner_id,
         name: _.pet.name,
@@ -167,8 +167,8 @@ const innerJoinQuery = new Query()
       `);
 
 const resultSubqueryJoin = new Query()
-      .table("person").column<{ id: string }>()
-      .table({ "doggos": innerJoinQuery }).column()
+      .table("person").schema<{ id: string }>()
+      .table({ "doggos": innerJoinQuery }).schema()
       .column(_ => ({
         owner: _.person.id,
         name: _.doggos.name,
