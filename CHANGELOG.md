@@ -1,4 +1,4 @@
-# @mild-ts/npm-typescript-boilerplate
+# @thaitype/querista
 
 ## 0.0.2
 

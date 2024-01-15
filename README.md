@@ -123,5 +123,10 @@ const resultSubqueryJoin = new Query()
       `);
 ```
 
+## Note
+
+- SQL tool: https://npmtrends.com/drizzle-orm-vs-knex-vs-kysely-vs-prisma-vs-sequelize-vs-typeorm
+- DB Migration: https://npmtrends.com/knex-vs-migrate-vs-sequelize-cli-vs-umzug
+
 ## Contribution
 Contributions are welcome! Feel free to submit issues, feature requests, or pull requests to help improve this project.
