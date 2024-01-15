@@ -1,8 +1,8 @@
-# @thaitype/ts-builder
+# Querista
 
 [![Test & Build](https://github.com/thaitype/sql-builder/actions/workflows/main.yml/badge.svg)](https://github.com/thaitype/sql-builder/actions/workflows/main.yml)
 
-> In development process & Proof of concept
+> In development & Proof of concept process
 
 This project introduces a simple yet powerful TypeScript implementation for building type-safe SQL queries. The primary goal is to enhance the developer experience when interacting with databases by providing a robust and type-checked way to construct SQL queries.
 
